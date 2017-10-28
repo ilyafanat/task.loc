@@ -1,0 +1,36 @@
+body {
+    margin: 0 auto;
+    padding: 0 auto;
+    width: 50%;
+}
+
+.nav-top {
+    height: 120px;
+    background: #9da1a0;
+}
+
+.main {
+    display: flex;
+    margin: 20px 0;
+}
+
+.left, .right {
+    width: 49%;
+    border: 1px solid #999999;
+    align-self: flex-end;
+    padding: 10px;
+}
+
+.left {
+    float: left;
+    margin-right: 2%;
+}
+
+.right {
+    float: right;
+}
+
+.nav-bottom {
+    height: 120px;
+    background: #9da1a0;
+}
