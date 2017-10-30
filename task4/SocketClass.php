@@ -33,22 +33,12 @@ class SocketClass
 
     private function authentification()
     {
-        var_dump($_SERVER);exit;
-        if (empty($_SERVER['PHP_AUTH_USER'])) {
-            header('WWW-Authenticate: Basic realm="Restricted area"');
-            header('HTTP/1.0 401 Unauthorized');
-            die ("Not authorized");
-        }
-
         
     }
 
     private function login()
     {
-        $username = $_SERVER['PHP_AUTH_USER'];
-        $password = $_SERVER['PHP_AUTH_PW'];
-
-        // var_dump($this->database);exit;
+        
     }
 
     private function databaseConnect()
