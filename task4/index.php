@@ -1,4 +1,6 @@
 <?php
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
 require_once __DIR__ . '/SocketClass.php';
 
@@ -6,7 +8,5 @@ use SocketClass\SocketClass as Socket;
 
 $socket = Socket::getInstance();
 
-// var_dump($_SERVER);exit;
-// $socket = Socket::getInstance($username, $password);
-
-// $socket->test();
+$socket->addPhone();
+var_dump($socket->showPhone());exit;

@@ -9,17 +9,19 @@ class SocketClass
     private static $INSTANCE = null;
     private $isLoggedIn = false;
     private $database = false;
-    private $username, $password;
+    private $username, $password, $phone, $email;
+    private $salt = false;
 
     private function __construct()
     {
-        if(empty($_SERVER['PHP_AUTH_DIGEST'])) {
-            $this->authentification();
-            
-        }
         $this->database = $this->databaseConnect();
+
         if (!$this->isLoggedIn) {
-            $this->isLoggedIn = $this->login();
+            $this->isLoggedIn = $this->authentification();
+        }
+
+        if (!$this->salt) {
+            $this->salt = $this->getSalt();
         }
     }
 
@@ -34,30 +36,87 @@ class SocketClass
 
     private function authentification()
     {
-        $realm = 'Restricted area';
-        header('HTTP/1.1 401 Unauthorized');
-        header('WWW-Authenticate: Digest realm="'.$realm.
-               '",qop="auth",nonce="'.uniqid().'",opaque="'.md5($realm).'"');
-        die ("Not authorized");
+        $this->username = $_POST['username'] ?: '';
+        $this->password = $_POST['password'] ?: '';
+
+        if (empty($this->username) || empty($this->password)) {
+            return $this->login();
+        }
+
+        $stmt = $this->database->prepare('SELECT password FROM users WHERE username = ?');
+        $stmt->execute([$this->username]);
+
+        return password_verify($this->password, $stmt->fetchColumn()) ?: $this->login();
     }
 
     private function login()
     {
-        $stmt = $this->database->prepare('SELECT password FROM users WHERE username = ?');
-        $stmt->execute([$this->username]);
-
-        return password_verify($this->password, $stmt->fetchColumn()) ?: $this->logout();
+        header('Location: /task4/login.php');
     }
 
-    private function logout()
+    private function getSalt()
     {
-        unset($_SERVER['PHP_AUTH_DIGEST']);
-        die('Password incorrect');
+        $stmt = $this->database->prepare('SELECT password FROM users WHERE username = "admin"');
+        $stmt->execute();
+
+        return $this->salt = $stmt->fetchColumn();
     }
-    
+
+    public function addPhone() {
+        $phone = $_POST['phone'] ?: '80668828904';
+        $email = $_POST['email'] ?: 'ilyafanat@mail.ru';
+
+        if (empty($phone) || empty($email)) {
+            return $this->showAddPhone();
+        }
+
+        $stmt = $this->database->prepare('INSERT INTO user_info (phone, email) VALUES (?, ?)');
+        $stmt->execute([$this->encrypt($phone), $this->encrypt($email)]);
+
+        return true;
+    }
+
+    private function showAddPhone()
+    {
+        header('Location: /task4/addphone.php');
+    }
+
+    public function showPhone() {
+        $email = $_POST['email'] ?: 'ilyafanat@mail.ru';
+
+        if (empty($email)) {
+            return $this->showAddPhone();
+        }
+
+        $stmt = $this->database->prepare('SELECT phone FROM user_info WHERE email = ?');
+        $stmt->execute([$this->encrypt($email)]);
+
+        return $this->decrypt($stmt->fetchColumn());
+    }
+
+    private function encrypt($string)
+    {
+        $encryptMethod = 'AES-256-CBC';
+
+        $key    = hash('sha256', $this->salt);
+        $iv     = substr(hash("sha256", 'admin'), 0, 16);
+        
+        return base64_encode(openssl_encrypt($string, $encryptMethod, $key, 0, $iv));
+    }
+
+    private function decrypt($string)
+    {
+        $encryptMethod = 'AES-256-CBC';
+
+        $key = hash('sha256', $this->salt);
+        $iv = substr(hash("sha256", 'admin'), 0, 16);
+
+        return openssl_decrypt(base64_decode($string), $encryptMethod, $key, 0, $iv);
+    }
+
     private function databaseConnect()
     {
-        $db = new \PDO('mysql:host=localhost;dbname=tasks', 'root', '');
+        $db = new \PDO('mysql:host=localhost;dbname=tasks;', 'root', 'root');
         $db->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
         // $db->exec('CREATE DATABASE IF NOT EXISTS `tasks`; USE `tasks`;');
         // $db->exec('CREATE TABLE IF NOT EXISTS `users`(
@@ -75,22 +134,5 @@ class SocketClass
 
         // $db->exec('INSERT INTO users (`username`, `password`) VALUES("admin", "'.password_hash("admin123", PASSWORD_DEFAULT).'");');
         return $db;
-    }
-
-    private function http_digest_parse($txt)
-    {
-        // protect against missing data
-        $needed_parts = array('nonce'=>1, 'nc'=>1, 'cnonce'=>1, 'qop'=>1, 'username'=>1, 'uri'=>1, 'response'=>1);
-        $data = array();
-        $keys = implode('|', array_keys($needed_parts));
-    
-        preg_match_all('@(' . $keys . ')=(?:([\'"])([^\2]+?)\2|([^\s,]+))@', $txt, $matches, PREG_SET_ORDER);
-    
-        foreach ($matches as $m) {
-            $data[$m[1]] = $m[3] ? $m[3] : $m[4];
-            unset($needed_parts[$m[1]]);
-        }
-    
-        return $needed_parts ? false : $data;
     }
 }
