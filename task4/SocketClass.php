@@ -51,7 +51,6 @@ class SocketClass
 
     private function logout()
     {
-        var_dump($this->http_digest_parse($_SERVER['PHP_AUTH_DIGEST']));exit;
         unset($_SERVER['PHP_AUTH_DIGEST']);
         die('Password incorrect');
     }
